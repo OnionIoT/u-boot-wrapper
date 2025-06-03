@@ -25,3 +25,8 @@ Run:
 ```
 bash build.sh setup_tree
 ```
+
+# TODO 
+
+- change dockerfile so image includes profile and buildscript
+- add gh action job to build image and publish to aws s3

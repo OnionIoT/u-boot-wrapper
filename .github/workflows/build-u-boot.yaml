@@ -48,4 +48,4 @@ jobs:
     
     - name: Export image tag
       id: meta
-      run: echo "tag=onion/u-boot-builder:${{ env.DATE }}
+      run: echo "tag=onion/u-boot-builder:${{ env.DATE }}"

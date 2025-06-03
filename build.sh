@@ -44,10 +44,16 @@ setup_tree () {
 }
 
 # build_uboot() {
-#     cd /u-boot
+#     cd u-boot
 #     make ${TARGET_DEVICE}_defconfig
 #     make ARCH=${TARGET_ARCH} CROSS_COMPILE=${TARGET_CROSS_COMPILE}
-#     cp u-boot-with-spl.bin /out/u-boot-with-spl-${RELEASE}-$(date +'%Y%m%d').bin
+#     if [ $? -ne 0 ]; then
+#         echo "Build failed"
+#         exit 1
+#     fi
+#     echo "Build successful"
+#     mkdir -p output
+#     cp u-boot-with-spl.bin output/u-boot-with-spl-${RELEASE}-$(date +'%Y%m%d').bin
 # }
 
 commands="
