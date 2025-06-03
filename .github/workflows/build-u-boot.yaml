@@ -1,0 +1,43 @@
+name: build-u-boot
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build-image:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Prepare u-boot tree
+      run: |
+        bash build.sh setup_tree
+        ls -R u-boot | head
+    
+    - uses: docker/setup-qemu-action@v3
+    - uses: docker/setup-buildx-action@v3
+
+    - name: Build and push
+      uses: docker/build-push-action@v6
+      with:
+        platforms: linux/amd64,linux/arm64
+        push: false
+        tags: onion/u-boot-builder
+        
+    - name: Build multi-arch image and push
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: ./Dockerfile
+        platforms: linux/amd64,linux/arm64
+        push: false
+        tags: onion/u-boot-builder:latest
+        #tags: ${{ env.REGISTRY }}/u-boot-builder:${{ github.sha }}
+        #cache-from: type=registry,ref=${{ env.REGISTRY }}/u-boot-builder:buildcache
+        #cache-to:   type=registry,ref=${{ env.REGISTRY }}/u-boot-builder:buildcache,mode=max
