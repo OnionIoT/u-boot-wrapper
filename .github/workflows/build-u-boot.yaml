@@ -9,11 +9,12 @@ on:
 jobs:
 
   build-image:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
+
+    - name: Set build date
+      run: echo "DATE=$(date +'%Y%m%d')" >> "$GITHUB_ENV"
 
     - name: Prepare u-boot tree
       run: |
@@ -23,21 +24,28 @@ jobs:
     - uses: docker/setup-qemu-action@v3
     - uses: docker/setup-buildx-action@v3
 
-    - name: Build and push
-      uses: docker/build-push-action@v6
+    - uses: docker/login-action@v3
       with:
-        platforms: linux/amd64,linux/arm64
-        push: false
-        tags: onion/u-boot-builder
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
         
-    - name: Build multi-arch image and push
+    - name: Build multiarch image and push
       uses: docker/build-push-action@v6
       with:
         context: .
         file: ./Dockerfile
         platforms: linux/amd64,linux/arm64
-        push: false
-        tags: onion/u-boot-builder:latest
+        push: true
+        tags: |
+            onion/u-boot-builder:latest
+            onion/u-boot-builder:${{ env.DATE }}
+        # onion/u-boot-builder:${{ env.DATE }}-${{ github.sha::7 }}
         #tags: ${{ env.REGISTRY }}/u-boot-builder:${{ github.sha }}
-        #cache-from: type=registry,ref=${{ env.REGISTRY }}/u-boot-builder:buildcache
-        #cache-to:   type=registry,ref=${{ env.REGISTRY }}/u-boot-builder:buildcache,mode=max
+        # cache-from: type=registry,ref=${{ env.REGISTRY }}/u-boot-builder:buildcache
+        # cache-to:   type=registry,ref=${{ env.REGISTRY }}/u-boot-builder:buildcache,mode=max
+        cache-from: type=registry,ref=onion/u-boot-builder:buildcache
+        cache-to:   type=registry,ref=onion/u-boot-builder:buildcache,mode=max
+    
+    - name: Export image tag
+      id: meta
+      run: echo "tag=onion/u-boot-builder:${{ env.DATE }}

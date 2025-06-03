@@ -5,7 +5,8 @@
 [ -z "$REPO" ] && exit 1
 [ -z "$TARGET_DEVICE" ] && exit 1
 [ -z "$TARGET_ARCH" ] && exit 1
-[ -z "$TTARGET_CROSS_COMPILEARGET_ARCH" ] && exit 1
+[ -z "$TARGET_CROSS_COMPILE" ] && exit 1
+[ -z "$RELEASE" ] && exit 1
 
 REPO_NAME="u-boot"
 
@@ -41,6 +42,13 @@ setup_tree () {
     apply_patches
     echo "Tree setup complete, ready to make Docker container or build directly"
 }
+
+# build_uboot() {
+#     cd /u-boot
+#     make ${TARGET_DEVICE}_defconfig
+#     make ARCH=${TARGET_ARCH} CROSS_COMPILE=${TARGET_CROSS_COMPILE}
+#     cp u-boot-with-spl.bin /out/u-boot-with-spl-${RELEASE}-$(date +'%Y%m%d').bin
+# }
 
 commands="
 setup_tree
