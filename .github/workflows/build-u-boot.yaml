@@ -54,9 +54,6 @@ jobs:
         cache-from: type=registry,ref=onion/u-boot-builder:buildcache
         cache-to:   type=registry,ref=onion/u-boot-builder:buildcache,mode=max
     
-    - name: Export image tag
-      id: meta
-      run: echo "tag=onion/u-boot-builder:${{ env.DATE }}"
     outputs:
       image_tag: ${{ env.IMAGE_TAG_FULL }}
       date: ${{ env.DATE }}
@@ -80,14 +77,14 @@ jobs:
 
     - name: Pull image
       run: |
-        docker pull ${{ env.IMAGE_TAG_FULL }}
+        docker pull ${{ env.IMAGE_TAG_LATEST }}
 
     - name: Build u-boot in container
       run: |
         mkdir -p out
         docker run --rm \
           -v $PWD/out:/u-boot-wrapper/u-boot/output \
-          ${{ env.IMAGE_TAG_FULL }} \
+          ${{ env.IMAGE_TAG_LATEST }} \
           /bin/bash -c "bash /u-boot-wrapper/build.sh build_uboot"
         ll out
 
