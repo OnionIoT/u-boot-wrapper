@@ -86,7 +86,7 @@ jobs:
       run: |
         mkdir -p out
         docker run --rm \
-          -v $PWD/out:/u-boot/output \
+          -v $PWD/out:/u-boot-wrapper/u-boot/output \
           ${{ env.IMAGE_TAG_FULL }} \
           /bin/bash -c "bash /u-boot-wrapper/build.sh build_uboot"
         ll out

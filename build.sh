@@ -50,11 +50,11 @@ setup_tree () {
 }
 
 build_uboot() {
-    if [ ! -d "$REPO_NAME" ]; then
-        echo "Repository not found, please run setup_tree first"
-        exit 1
+    # if already in u-boot directory, skip changing directory
+    cwd=$(basename $PWD)
+    if [ "$cwd" != "$REPO_NAME" ]; then
+        cd $REPO_NAME
     fi
-    cd $REPO_NAME
 
     echo "Building U-Boot for $TARGET_DEVICE"
     make ${TARGET_DEVICE}_defconfig
@@ -65,7 +65,7 @@ build_uboot() {
     fi
     echo "Build successful"
     mkdir -p output
-    cp u-boot-with-spl.bin output/u-boot-with-spl-${UBOOT_RELEASE}-$(date +'%Y%m%d').bin
+    cp u-boot-with-spl.bin output/${TARGET_DEVICE}_u-boot-with-spl-${UBOOT_RELEASE}-$(date +'%Y%m%d').bin
 }
 
 commands="
