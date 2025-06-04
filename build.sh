@@ -50,11 +50,11 @@ setup_tree () {
 }
 
 build_uboot() {
-    # if already in u-boot directory, skip changing directory
-    cwd=${basename "$PWD"}
-    if [ "$cwd" != "$REPO_NAME" ]; then
-        cd $REPO_NAME
+    if [ ! -d "$REPO_NAME" ]; then
+        echo "Repository not found, please run setup_tree first"
+        exit 1
     fi
+    cd $REPO_NAME
 
     echo "Building U-Boot for $TARGET_DEVICE"
     make ${TARGET_DEVICE}_defconfig
