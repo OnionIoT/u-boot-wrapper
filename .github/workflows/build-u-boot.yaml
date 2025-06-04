@@ -86,7 +86,7 @@ jobs:
         docker start --attach "$cid"
 
         mkdir -p out
-        docker cp "$cid":/u-boot-wrapper/u-boot/output/* ./out/
+        docker cp "$cid":/u-boot-wrapper/u-boot/output/. ./out/
         docker rm "$cid"
 
     - name: Upload artifacts
