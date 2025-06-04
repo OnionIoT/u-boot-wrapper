@@ -77,16 +77,17 @@ jobs:
 
     - name: Pull image
       run: |
-        docker pull ${{ env.IMAGE_TAG_LATEST }}
+        docker pull ${{ env.IMAGE_TAG_FULL }}
 
     - name: Build u-boot in container
       run: |
+        cid=$(docker create ${{ env.IMAGE_TAG_FULL }} \
+              /bin/bash -c "bash /u-boot-wrapper/build.sh build_uboot")
+        docker start --attach "$cid"
+
         mkdir -p out
-        docker run --rm \
-          -v $PWD/out:/u-boot-wrapper/u-boot/output \
-          ${{ env.IMAGE_TAG_LATEST }} \
-          /bin/bash -c "bash /u-boot-wrapper/build.sh build_uboot"
-        ll out
+        docker cp "$cid":/u-boot-wrapper/u-boot/output/* ./out/
+        docker rm "$cid"
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4

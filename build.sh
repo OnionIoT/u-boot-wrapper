@@ -55,8 +55,6 @@ build_uboot() {
     if [ "$cwd" != "$REPO_NAME" ]; then
         cd $REPO_NAME
     fi
-    whoami
-    ls -al output
 
     echo "Building U-Boot for $TARGET_DEVICE"
     make ${TARGET_DEVICE}_defconfig
@@ -67,12 +65,9 @@ build_uboot() {
     fi
 
     echo "Build successful"
-    ls -al output
     mkdir -p output
-    ls -al output
 
     cp u-boot-with-spl.bin output/${TARGET_DEVICE}_u-boot-with-spl-${UBOOT_RELEASE}-$(date +'%Y%m%d').bin
-    ls -al output
 }
 
 commands="
