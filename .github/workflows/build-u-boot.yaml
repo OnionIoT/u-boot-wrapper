@@ -58,6 +58,8 @@ jobs:
       run: echo "tag=onion/u-boot-builder:${{ env.DATE }}"
     outputs:
       image_tag: ${{ env.IMAGE_TAG_FULL }}
+      date: ${{ env.DATE }}
+      github_sha_short: ${{ env.GITHUB_SHA_SHORT }}
   
   build-u-boot:
     needs: build-image
@@ -65,20 +67,31 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: sanity check
+    - name: Compute variables
+      # Github stops propagation of image_tag variable since it thinks it's a secret
+      id: vars
       run: |
-        echo "Image tag: ${{ needs.build-image.outputs.image_tag }}"
+        echo "IMAGE_TAG_LATEST=${{env.IMAGE_BASE}}:latest" >> "$GITHUB_ENV"
+        echo "IMAGE_TAG_FULL=\"${{env.IMAGE_BASE}}:${{ needs.build-image.outputs.date }}-${{ needs.build-image.outputs.github_sha_short }}\"" >> "$GITHUB_ENV"
+        echo "Image tag: ${{ env.IMAGE_TAG_FULL }}"
         echo "S3 bucket: ${{ env.S3_BUCKET }}"
+
 
     - name: Pull image
       run: |
-        docker pull ${{ needs.build-image.outputs.image_tag }}
+        docker pull ${{ env.IMAGE_TAG_FULL }}
 
     - name: Build u-boot in container
       run: |
         mkdir -p out
         docker run -rm \
           -v $PWD/out:/u-boot/output \
-          ${{ needs.build-image.outputs.image_tag }}
+          ${{ env.IMAGE_TAG_FULL }}
           /bin/bash -c "bash build.sh build_uboot"
         ll out
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: u-boot-binaries
+        path: out/*
