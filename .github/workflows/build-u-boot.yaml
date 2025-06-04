@@ -2,7 +2,8 @@ name: build-u-boot
 
 env:
   IMAGE_BASE: onion/u-boot-builder
-  S3_BUCKET: mybucket
+  S3_BUCKET: repo.onioniot.com
+  S3_REGION: us-east-1
 
 on:
   push:
@@ -96,16 +97,30 @@ jobs:
         name: u-boot-binaries
         path: out/*
 
-  # publish:
-  #   needs: built-u-boot
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #   - name: Configure AWS credentials
-  #     uses: aws-actions/configure-aws-credentials@v1
-  #     with:
-  #       aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #       aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #       aws-region: ca-central-1
+  publish:
+    needs: build-u-boot
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: u-boot-binaries
+        path: out
+    - name: Compute variables
+      id: vars
+      shell: bash
+      run: |
+        source profile
+        echo "UBOOT_RELEASE=\"${UBOOT_RELEASE}\"" >> "$GITHUB_ENV"
+        echo "UBOOT_RELEASE=\"${UBOOT_RELEASE}\""
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.S3_REGION }}
     
-  #   - name: Deploy to S3
-  #     run: aws s3 sync ./out/* s3://${{ env.S3_BUCKET}}/omega2/bootloader/ --delete
+    - name: Deploy to S3
+      run: aws s3 cp ./out/* s3://${{ env.S3_BUCKET }}/omega2/bootloader/${{ env.UBOOT_RELEASE }}/
