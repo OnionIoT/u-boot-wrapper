@@ -6,7 +6,7 @@
 [ -z "$TARGET_DEVICE" ] && exit 1
 [ -z "$TARGET_ARCH" ] && exit 1
 [ -z "$TARGET_CROSS_COMPILE" ] && exit 1
-[ -z "$RELEASE" ] && exit 1
+[ -z "$UBOOT_RELEASE" ] && exit 1
 
 REPO_NAME="u-boot"
 
@@ -37,21 +37,40 @@ apply_patches() {
     cd -
 }
 
+add_files() {
+    cp profile "$REPO_NAME/"
+    cp build.sh "$REPO_NAME/"
+}
+
 setup_tree () {
     checkout_repo
     apply_patches
+    add_files
     echo "Tree setup complete, ready to make Docker container or build directly"
 }
 
-# build_uboot() {
-#     cd /u-boot
-#     make ${TARGET_DEVICE}_defconfig
-#     make ARCH=${TARGET_ARCH} CROSS_COMPILE=${TARGET_CROSS_COMPILE}
-#     cp u-boot-with-spl.bin /out/u-boot-with-spl-${RELEASE}-$(date +'%Y%m%d').bin
-# }
+build_uboot() {
+    # if already in u-boot directory, skip changing directory
+    cwd=${basename "$PWD"}
+    if [ "$cwd" != "$REPO_NAME" ]; then
+        cd $REPO_NAME
+    fi
+
+    echo "Building U-Boot for $TARGET_DEVICE"
+    make ${TARGET_DEVICE}_defconfig
+    make ARCH=${TARGET_ARCH} CROSS_COMPILE=${TARGET_CROSS_COMPILE}
+    if [ $? -ne 0 ]; then
+        echo "Build failed"
+        exit 1
+    fi
+    echo "Build successful"
+    mkdir -p output
+    cp u-boot-with-spl.bin output/u-boot-with-spl-${UBOOT_RELEASE}-$(date +'%Y%m%d').bin
+}
 
 commands="
 setup_tree
+build_uboot
 "
 
 usage() {

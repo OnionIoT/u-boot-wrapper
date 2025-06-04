@@ -1,5 +1,9 @@
 name: build-u-boot
 
+env:
+  IMAGE_BASE: onion/u-boot-builder
+  S3_BUCKET: mybucket
+
 on:
   push:
     branches: [ "main" ]
@@ -7,19 +11,26 @@ on:
     branches: [ "main" ]
 
 jobs:
-
   build-image:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set build date
-      run: echo "DATE=$(date +'%Y%m%d')" >> "$GITHUB_ENV"
+    - name: Compute variables
+      id: vars
+      run: |
+        date=$(date +'%Y%m%d')
+        echo "DATE=\"${date}\"" >> "$GITHUB_ENV"
+        github_sha_hash=${{ github.sha }}
+        github_sha_short="${github_sha_hash:0:7}"
+        echo "GITHUB_SHA_SHORT=${github_sha_short}" >> "$GITHUB_ENV"
+        echo "IMAGE_TAG_LATEST=${{env.IMAGE_BASE}}:latest" >> "$GITHUB_ENV"
+        echo "IMAGE_TAG_FULL=\"${{env.IMAGE_BASE}}:${date}-${github_sha_short}\"" >> "$GITHUB_ENV"
 
     - name: Prepare u-boot tree
       run: |
         bash build.sh setup_tree
-        ls -R u-boot | head
+        cat u-boot/Makefile | head -n 8
     
     - uses: docker/setup-qemu-action@v3
     - uses: docker/setup-buildx-action@v3
@@ -37,15 +48,37 @@ jobs:
         platforms: linux/amd64,linux/arm64
         push: true
         tags: |
-            onion/u-boot-builder:latest
-            onion/u-boot-builder:${{ env.DATE }}
-        # onion/u-boot-builder:${{ env.DATE }}-${{ github.sha::7 }}
-        #tags: ${{ env.REGISTRY }}/u-boot-builder:${{ github.sha }}
-        # cache-from: type=registry,ref=${{ env.REGISTRY }}/u-boot-builder:buildcache
-        # cache-to:   type=registry,ref=${{ env.REGISTRY }}/u-boot-builder:buildcache,mode=max
+            ${{ env.IMAGE_TAG_LATEST }}
+            ${{ env.IMAGE_TAG_FULL }}
         cache-from: type=registry,ref=onion/u-boot-builder:buildcache
         cache-to:   type=registry,ref=onion/u-boot-builder:buildcache,mode=max
     
     - name: Export image tag
       id: meta
-      run: echo "tag=onion/u-boot-builder:${{ env.DATE }}
+      run: echo "tag=onion/u-boot-builder:${{ env.DATE }}"
+    outputs:
+      image_tag: ${{ env.IMAGE_TAG_FULL }}
+  
+  build-u-boot:
+    needs: build-image
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: sanity check
+      run: |
+        echo "Image tag: ${{ needs.build-image.outputs.image_tag }}"
+        echo "S3 bucket: ${{ env.S3_BUCKET }}"
+
+    - name: Pull image
+      run: |
+        docker pull ${{ needs.build-image.outputs.image_tag }}
+
+    - name: Build u-boot in container
+      run: |
+        mkdir -p out
+        docker run -rm \
+          -v $PWD/out:/u-boot/output \
+          ${{ needs.build-image.outputs.image_tag }}
+          /bin/bash -c "bash build.sh build_uboot"
+        ll out

@@ -25,3 +25,18 @@ Run:
 ```
 bash build.sh setup_tree
 ```
+
+# TODO 
+
+- ✅ change dockerfile so image includes profile and buildscript
+- fix build-image workflow to also use sha in docker image name
+- add gh action job to build image and publish to aws s3
+    - build job:
+        - checkout
+        - ❌set build date
+        - pull image
+        - startup docker container
+        - run build command
+        - push artifacts to S3
+- update gh action to run workflow only on release?
+- update readme
