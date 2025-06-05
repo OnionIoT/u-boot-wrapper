@@ -6,8 +6,10 @@ env:
   S3_REGION: us-east-1
 
 on:
-  push:
-    branches: [ "main" ]
+  release:
+    types: [published]
+  # push:
+  #   branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
@@ -52,6 +54,7 @@ jobs:
   build-image:
     needs: build-u-boot
     runs-on: ubuntu-latest
+    if: github.event_name == 'release'
     steps:
     - uses: actions/checkout@v4
 
@@ -98,6 +101,7 @@ jobs:
   publish:
     needs: build-u-boot
     runs-on: ubuntu-latest
+    if: github.event_name == 'release'
     steps:
     - uses: actions/checkout@v4
     - name: Download artifacts
