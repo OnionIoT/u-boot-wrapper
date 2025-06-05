@@ -51,7 +51,7 @@ setup_tree () {
 
 build_uboot() {
     # if already in u-boot directory, skip changing directory
-    cwd=${basename "$PWD"}
+    cwd=$(basename $PWD)
     if [ "$cwd" != "$REPO_NAME" ]; then
         cd $REPO_NAME
     fi
@@ -63,9 +63,11 @@ build_uboot() {
         echo "Build failed"
         exit 1
     fi
+
     echo "Build successful"
     mkdir -p output
-    cp u-boot-with-spl.bin output/u-boot-with-spl-${UBOOT_RELEASE}-$(date +'%Y%m%d').bin
+
+    cp u-boot-with-spl.bin output/${TARGET_DEVICE}_u-boot-with-spl-${UBOOT_RELEASE}-$(date +'%Y%m%d').bin
 }
 
 commands="

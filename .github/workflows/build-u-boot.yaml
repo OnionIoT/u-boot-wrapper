@@ -2,16 +2,19 @@ name: build-u-boot
 
 env:
   IMAGE_BASE: onion/u-boot-builder
-  S3_BUCKET: mybucket
+  S3_BUCKET: repo.onioniot.com
+  S3_REGION: us-east-1
 
 on:
-  push:
-    branches: [ "main" ]
+  release:
+    types: [published]
+  # push:
+  #   branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
 jobs:
-  build-image:
+  build-u-boot:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -19,13 +22,55 @@ jobs:
     - name: Compute variables
       id: vars
       run: |
+        image_tag="${{env.IMAGE_BASE}}:local"
+        echo "IMAGE_TAG=${image_tag}" >> "$GITHUB_ENV"
+        echo "Image Tag: ${image_tag}"
+
+    - name: Prepare u-boot tree
+      run: |
+        bash build.sh setup_tree
+        cat u-boot/Makefile | head -n 8
+
+    - name: Build docker image
+      run: |
+        docker build -t ${{ env.IMAGE_TAG }} .
+
+    - name: Build u-boot in container
+      run: |
+        cid=$(docker create ${{ env.IMAGE_TAG }} \
+              /bin/bash -c "bash /u-boot-wrapper/build.sh build_uboot")
+        docker start --attach "$cid"
+
+        mkdir -p out
+        docker cp "$cid":/u-boot-wrapper/u-boot/output/. ./out/
+        docker rm "$cid"
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: u-boot-binaries
+        path: out/*
+
+  build-image:
+    needs: build-u-boot
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Compute variables
+      id: vars
+      run: |
         date=$(date +'%Y%m%d')
-        echo "DATE=\"${date}\"" >> "$GITHUB_ENV"
         github_sha_hash=${{ github.sha }}
         github_sha_short="${github_sha_hash:0:7}"
+        image_tag_latest="${{env.IMAGE_BASE}}:latest"
+        image_tag_detailed="${{env.IMAGE_BASE}}:${date}-${github_sha_short}"
         echo "GITHUB_SHA_SHORT=${github_sha_short}" >> "$GITHUB_ENV"
-        echo "IMAGE_TAG_LATEST=${{env.IMAGE_BASE}}:latest" >> "$GITHUB_ENV"
-        echo "IMAGE_TAG_FULL=\"${{env.IMAGE_BASE}}:${date}-${github_sha_short}\"" >> "$GITHUB_ENV"
+        echo "IMAGE_TAG_LATEST=${image_tag_latest}" >> "$GITHUB_ENV"
+        echo "IMAGE_TAG_DETAILED=${image_tag_detailed}" >> "$GITHUB_ENV"
+        echo "Image Tag Latest:   ${image_tag_latest}"
+        echo "Image Tag Detailed: ${image_tag_detailed}"
 
     - name: Prepare u-boot tree
       run: |
@@ -49,36 +94,35 @@ jobs:
         push: true
         tags: |
             ${{ env.IMAGE_TAG_LATEST }}
-            ${{ env.IMAGE_TAG_FULL }}
+            ${{ env.IMAGE_TAG_DETAILED }}
         cache-from: type=registry,ref=onion/u-boot-builder:buildcache
         cache-to:   type=registry,ref=onion/u-boot-builder:buildcache,mode=max
-    
-    - name: Export image tag
-      id: meta
-      run: echo "tag=onion/u-boot-builder:${{ env.DATE }}"
-    outputs:
-      image_tag: ${{ env.IMAGE_TAG_FULL }}
-  
-  build-u-boot:
-    needs: build-image
+
+  publish:
+    needs: build-u-boot
     runs-on: ubuntu-latest
+    if: github.event_name == 'release'
     steps:
     - uses: actions/checkout@v4
-
-    - name: sanity check
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: u-boot-binaries
+        path: out
+    - name: Compute variables
+      id: vars
+      shell: bash
       run: |
-        echo "Image tag: ${{ needs.build-image.outputs.image_tag }}"
-        echo "S3 bucket: ${{ env.S3_BUCKET }}"
+        source profile
+        echo "UBOOT_RELEASE=\"${UBOOT_RELEASE}\"" >> "$GITHUB_ENV"
+        echo "UBOOT_RELEASE=\"${UBOOT_RELEASE}\""
 
-    - name: Pull image
-      run: |
-        docker pull ${{ needs.build-image.outputs.image_tag }}
-
-    - name: Build u-boot in container
-      run: |
-        mkdir -p out
-        docker run -rm \
-          -v $PWD/out:/u-boot/output \
-          ${{ needs.build-image.outputs.image_tag }}
-          /bin/bash -c "bash build.sh build_uboot"
-        ll out
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.S3_REGION }}
+    
+    - name: Deploy to S3
+      run: aws s3 cp ./out/* s3://${{ env.S3_BUCKET }}/omega2/bootloader/${{ env.UBOOT_RELEASE }}/
