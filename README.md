@@ -111,7 +111,7 @@ Where `u-boot-builder` is the name of the image.
 Then, start a Docker container based on the Image:
 
 ```
-docker run --rm -it uboot-builder-with-srcu-boot-builder bash
+docker run --rm -it u-boot-builder bash
 ```
 
 #### Step 4: Build u-boot in the Docker container
@@ -141,7 +141,7 @@ docker pull onion/u-boot-builder:latest
 Then, start a Docker container based on the Image:
 
 ```
-docker run --rm -it uboot-builder-with-srcu-boot-builder bash
+docker run --rm -it onion/u-boot-builder:latest bash
 ```
 
 #### Step 3: Build u-boot in the Docker container
@@ -198,3 +198,5 @@ docker buildx build \
   --load \
   .
 ```
+
+The Images can now be pushed to a Docker Image registry. They are not automatically loaded for use since they are for multiple architectures.
