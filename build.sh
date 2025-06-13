@@ -58,7 +58,7 @@ build_uboot() {
 
     echo "Building U-Boot for $TARGET_DEVICE"
     make ${TARGET_DEVICE}_defconfig
-    make ARCH=${TARGET_ARCH} CROSS_COMPILE=${TARGET_CROSS_COMPILE}
+    eval "make ARCH=${TARGET_ARCH} CROSS_COMPILE=${TARGET_CROSS_COMPILE} ${COMPILE_FLAGS}"
     if [ $? -ne 0 ]; then
         echo "Build failed"
         exit 1

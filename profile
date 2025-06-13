@@ -7,5 +7,4 @@ UBOOT_RELEASE="v2025.04"
 TARGET_DEVICE="onion-omega2p"
 TARGET_ARCH="mips"
 TARGET_CROSS_COMPILE="mipsel-linux-gnu-"
-
-
+COMPILE_FLAGS='KCFLAGS="-Os -pipe -fno-caller-saves"'
